@@ -1,0 +1,514 @@
+:root {
+    --bg-dark: #0f172a;
+    /* Slate 900 */
+    --bg-card: #1e293b;
+    /* Slate 800 */
+    --accent-primary: #3b82f6;
+    /* Blue 500 */
+    --accent-wicket: #f43f5e;
+    /* Rose 500 */
+    --accent-run: #22c55e;
+    /* Green 500 */
+    --accent-four: #8b5cf6;
+    /* Violet 500 */
+    --accent-six: #eab308;
+    /* Yellow 500 */
+    --text-main: #f8fafc;
+    --text-dim: #94a3b8;
+
+    --glass-bg: rgba(30, 41, 59, 0.7);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+    --font-heading: 'Teko', sans-serif;
+    --font-body: 'Outfit', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.app-container {
+    max-width: 600px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    padding-bottom: 20px;
+}
+
+/* --- Views --- */
+.view {
+    padding: 20px;
+    animation: fadeIn 0.4s ease;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Glassmorphism --- */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: var(--glass-border);
+    border-radius: 16px;
+    box-shadow: var(--glass-shadow);
+    overflow: hidden;
+}
+
+/* --- Setup Screen --- */
+.setup-header {
+    text-align: center;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.setup-header h1 {
+    font-family: var(--font-heading);
+    font-size: 3rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: linear-gradient(to right, #60a5fa, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.setup-panel {
+    padding: 24px;
+}
+
+.teams-grid {
+    display: grid;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.team-input-group label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    margin-top: 12px;
+}
+
+input,
+textarea {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    color: white;
+    font-family: inherit;
+    font-size: 1rem;
+    outline: none;
+    transition: 0.2s;
+}
+
+input:focus,
+textarea:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.vs-divider {
+    text-align: center;
+    font-weight: 800;
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    margin: 10px 0;
+}
+
+.btn-primary {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent-primary), #2563eb);
+    color: white;
+    border: none;
+    padding: 16px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.1s;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+/* --- Match View --- */
+.match-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.team-score-block {
+    flex: 1;
+}
+
+.team-score-block.dim {
+    opacity: 0.5;
+    transform: scale(0.9);
+}
+
+.team-score-block h2 {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+}
+
+.big-score {
+    font-family: var(--font-heading);
+    font-size: 3.5rem;
+    line-height: 1;
+    font-weight: 700;
+    margin: 4px 0;
+}
+
+.overs-display {
+    font-family: 'monospace';
+    background: rgba(255, 255, 255, 0.1);
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.divider {
+    width: 1px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0 10px;
+}
+
+.crr-display,
+.target-display {
+    font-size: 0.8rem;
+    color: var(--accent-six);
+}
+
+.status-area {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.card {
+    padding: 16px;
+}
+
+.player-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    opacity: 0.6;
+    transition: 0.3s;
+}
+
+.player-row.active-striker {
+    opacity: 1;
+    transform: translateX(4px);
+}
+
+.player-row:last-child {
+    margin-bottom: 0;
+}
+
+.bat-icon,
+.ball-icon {
+    font-size: 1.2rem;
+    color: var(--accent-primary);
+}
+
+.ball-icon {
+    color: var(--accent-wicket);
+}
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.player-info .name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.player-info .stats {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+}
+
+/* This Over Strip */
+.this-over-strip {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    gap: 12px;
+    overflow-x: auto;
+}
+
+.this-over-strip .label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    white-space: nowrap;
+}
+
+.balls-container {
+    display: flex;
+    gap: 8px;
+}
+
+.ball-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.ball-4 {
+    background: var(--accent-four);
+    color: white;
+}
+
+.ball-6 {
+    background: var(--accent-six);
+    color: black;
+}
+
+.ball-w {
+    background: var(--accent-wicket);
+    color: white;
+}
+
+.ball-wd,
+.ball-nb {
+    background: var(--text-dim);
+    color: black;
+}
+
+/* Control Panel */
+.controls-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding-bottom: 20px;
+}
+
+button[class^="btn-"] {
+    border: none;
+    border-radius: 12px;
+    padding: 16px 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    font-family: var(--font-heading);
+    cursor: pointer;
+    transition: 0.1s;
+    color: white;
+}
+
+button[class^="btn-"]:active {
+    transform: scale(0.95);
+}
+
+.btn-run {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.boundary-4 {
+    background: rgba(139, 92, 246, 0.3);
+    border: 1px solid rgba(139, 92, 246, 0.5);
+}
+
+.boundary-6 {
+    background: rgba(234, 179, 8, 0.3);
+    border: 1px solid rgba(234, 179, 8, 0.5);
+}
+
+.btn-extra {
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--accent-primary);
+    font-size: 1rem;
+}
+
+.btn-wicket {
+    grid-column: span 2;
+    background: var(--accent-wicket);
+    color: white;
+}
+
+.btn-action {
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    grid-column: span 2;
+}
+
+/* Modals */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+}
+
+.modal-content {
+    width: 100%;
+    max-width: 400px;
+    padding: 24px;
+    text-align: center;
+}
+
+.wicket-options,
+.player-list,
+.extras-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 20px 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.extras-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.btn-wicket-opt,
+.btn-player-opt {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 16px;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.btn-wicket-opt:hover,
+.btn-player-opt:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-cancel {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* PDF Styles (Hidden mainly) */
+.pdf-container {
+    background: white;
+    color: black;
+    padding: 40px;
+    font-family: 'Helvetica', sans-serif;
+}
+
+.pdf-title {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.pdf-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+}
+
+.pdf-team h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.pdf-vs {
+    font-weight: bold;
+    font-size: 2rem;
+    color: #ccc;
+}
+
+.pdf-result {
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--bg-dark);
+    margin-bottom: 30px;
+}
+
+/* Responsive */
+@media (max-width: 380px) {
+    .controls-grid {
+        gap: 8px;
+    }
+
+    .big-score {
+        font-size: 2.5rem;
+    }
+
+    .setup-header h1 {
+        font-size: 2rem;
+    }
+}

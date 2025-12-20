@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NightMatch Cricket Tracker</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Teko:wght@500;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- PDF Lib -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+
+<body>
+
+    <div class="app-container">
+
+        <!-- SETUP VIEW -->
+        <section id="setup-view" class="view active-view">
+            <div class="glass-panel setup-panel">
+                <header class="setup-header">
+                    <h1>Start New Match</h1>
+                    <p>Enter team details and squads</p>
+                </header>
+
+                <form id="setup-form">
+                    <div class="teams-grid">
+                        <div class="team-input-group">
+                            <label>Team A Name</label>
+                            <input type="text" id="team-a-name" placeholder="e.g. Royal Strikers" required>
+                            <label>Squad (One name per line)</label>
+                            <textarea id="team-a-squad" placeholder="Player 1&#10;Player 2&#10;..." required></textarea>
+                        </div>
+
+                        <div class="vs-divider">VS</div>
+
+                        <div class="team-input-group">
+                            <label>Team B Name</label>
+                            <input type="text" id="team-b-name" placeholder="e.g. Super Kings" required>
+                            <label>Squad (One name per line)</label>
+                            <textarea id="team-b-squad" placeholder="Player 1&#10;Player 2&#10;..." required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="overs-input">
+                        <label>Total Overs</label>
+                        <input type="number" id="total-overs" value="10" min="1" max="50">
+                    </div>
+<br>
+                    <button type="submit" class="btn-primary btn-large">
+                        <span class="material-icons-round">sports_cricket</span> Start Match
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- MATCH VIEW -->
+        <section id="match-view" class="view hidden">
+            <!-- Header -->
+            <header class="match-header glass-panel">
+                <div class="team-score-block batting">
+                    <h2 id="batting-team-name">Team A</h2>
+                    <div class="big-score">
+                        <span id="score">0</span>/<span id="wickets">0</span>
+                    </div>
+                    <div class="overs-display">
+                        <span id="overs">0.0</span> <span class="dim">/</span> <span id="max-overs">10</span>
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="team-score-block bowling dim">
+                    <h2 id="bowling-team-name">Team B</h2>
+                    <div class="target-display hidden" id="target-display">
+                        Target: <span id="target-score">--</span>
+                    </div>
+                    <div class="crr-display">
+                        CRR: <span id="crr">0.00</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Status Area -->
+            <div class="status-area">
+                <!-- Batsmen -->
+                <div class="card glass-panel batsmen-card">
+                    <div class="player-row active-striker" id="striker-row">
+                        <span class="bat-icon material-icons-round">sports_cricket</span>
+                        <div class="player-info">
+                            <span class="name" id="striker-name">Select Striker</span>
+                            <span class="stats"><span id="striker-runs">0</span>(<span
+                                    id="striker-balls">0</span>)</span>
+                        </div>
+                    </div>
+                    <div class="player-row" id="non-striker-row">
+                        <div class="player-info">
+                            <span class="name" id="non-striker-name">Select Non-Striker</span>
+                            <span class="stats"><span id="non-striker-runs">0</span>(<span
+                                    id="non-striker-balls">0</span>)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bowler -->
+                <div class="card glass-panel bowler-card">
+                    <div class="player-row">
+                        <span class="ball-icon material-icons-round">sports_baseball</span>
+                        <div class="player-info">
+                            <span class="name" id="bowler-name">Select Bowler</span>
+                            <span class="stats">
+                                <span id="bowler-wickets">0</span>-<span id="bowler-runs">0</span>
+                                <span class="dim">(<span id="bowler-overs">0.0</span>)</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- This Over -->
+            <div class="this-over-strip glass-panel">
+                <span class="label">This Over:</span>
+                <div class="balls-container" id="this-over-balls">
+                    <!-- Balls will be injected here -->
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="controls-grid">
+                <button class="btn-run" onclick="addRun(0)">0</button>
+                <button class="btn-run" onclick="addRun(1)">1</button>
+                <button class="btn-run" onclick="addRun(2)">2</button>
+                <button class="btn-run" onclick="addRun(3)">3</button>
+                <button class="btn-run boundary-4" onclick="addRun(4)">4</button>
+                <button class="btn-run boundary-6" onclick="addRun(6)">6</button>
+
+                <button class="btn-extra" onclick="openExtraModal('wide')">WD</button>
+                <button class="btn-extra" onclick="openExtraModal('nb')">NB</button>
+                <button class="btn-extra" onclick="openExtraModal('bye')">BYE</button>
+
+                <button class="btn-wicket" onclick="openWicketModal()">OUT</button>
+                <button class="btn-action" onclick="undoLastBall()">UNDO</button>
+                <button class="btn-action" onclick="endMatch()">END</button>
+            </div>
+        </section> <!-- End Match View -->
+
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- Select Player Modal -->
+    <div id="player-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h3 id="player-modal-title">Select Player</h3>
+            <div class="player-list" id="player-select-list">
+                <!-- List items generated by JS -->
+            </div>
+            <button class="btn-cancel" onclick="closeModal('player-modal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Wicket Modal -->
+    <div id="wicket-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h3>Wicket Type</h3>
+            <div class="wicket-options">
+                <button class="btn-wicket-opt" onclick="confirmWicket('bowled')">Bowled</button>
+                <button class="btn-wicket-opt" onclick="confirmWicket('caught')">Caught</button>
+                <button class="btn-wicket-opt" onclick="initRunOut()">Run Out</button>
+                <!-- LBW Removed -->
+            </div>
+            <div id="run-out-options" class="hidden">
+                <h4>Who is out?</h4>
+                <button class="btn-player-opt" id="ro-striker-btn"
+                    onclick="confirmWicket('run-out', 'striker')">Striker</button>
+                <button class="btn-player-opt" id="ro-non-striker-btn"
+                    onclick="confirmWicket('run-out', 'non-striker')">Non-Striker</button>
+            </div>
+            <button class="btn-cancel" onclick="closeModal('wicket-modal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Extras Modal -->
+    <div id="extras-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h3 id="extras-modal-title">Select Extras</h3>
+            <div class="extras-options" id="extras-options-container">
+                <!-- Dynamically populated buttons -->
+            </div>
+            <button class="btn-cancel" onclick="closeModal('extras-modal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Match End / PDF Modal -->
+    <div id="match-end-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>Match Ended</h2>
+            <p id="match-result-text">Team A won by X runs</p><br>
+            <button class="btn-primary" onclick="generatePDF()">Download PDF Report</button><br>
+            <button class="btn-primary" onclick="location.reload()">New Match</button>
+        </div>
+    </div>
+
+    <!-- Hidden PDF Template -->
+    <div id="pdf-template" style="display:none;">
+        <div class="pdf-container">
+            <h1 class="pdf-title">Match Summary</h1>
+            <div class="pdf-header">
+                <div class="pdf-team">
+                    <h2 id="pdf-team-a">Team A</h2>
+                    <p id="pdf-score-a">0/0 (0.0)</p>
+                </div>
+                <div class="pdf-vs">VS</div>
+                <div class="pdf-team">
+                    <h2 id="pdf-team-b">Team B</h2>
+                    <p id="pdf-score-b">0/0 (0.0)</p>
+                </div>
+            </div>
+            <div class="pdf-result" id="pdf-result"></div>
+
+            <div class="pdf-section">
+                <h3>Detailed Scorecard</h3>
+                <div id="pdf-scorecard-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
