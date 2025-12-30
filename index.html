@@ -38,7 +38,7 @@
                 <form id="setup-form">
                     <div class="teams-grid">
                         <div class="team-input-group">
-                            <label>Team A Name</label>
+                            <label>Team A Name(Batting team)</label>
                             <input type="text" id="team-a-name" placeholder="e.g. Royal Strikers" required>
                             <label>Squad (One name per line)</label>
                             <textarea id="team-a-squad" placeholder="Player 1&#10;Player 2&#10;..." required></textarea>
@@ -47,18 +47,48 @@
                         <div class="vs-divider">VS</div>
 
                         <div class="team-input-group">
-                            <label>Team B Name</label>
+                            <label>Team B Name(Bowling team)</label>
                             <input type="text" id="team-b-name" placeholder="e.g. Super Kings" required>
                             <label>Squad (One name per line)</label>
                             <textarea id="team-b-squad" placeholder="Player 1&#10;Player 2&#10;..." required></textarea>
                         </div>
                     </div>
 
-                    <div class="overs-input">
-                        <label>Total Overs</label>
-                        <input type="number" id="total-overs" value="10" min="1" max="50">
+                    <div class="match-type-group">
+                        <label>Match Type</label>
+                        <div class="radio-options">
+                            <label class="radio-label">
+                                <input type="radio" name="matchType" value="limited" checked
+                                    onchange="toggleMatchType()"> Limited Overs
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="matchType" value="test" onchange="toggleMatchType()"> Test
+                                Match
+                            </label>
+                        </div>
                     </div>
-<br>
+
+                    <div id="limited-config" class="config-section">
+                        <div class="overs-input">
+                            <label>Total Overs</label>
+                            <input type="number" id="total-overs" value="10" min="1" max="50">
+                        </div>
+                    </div>
+
+                    <div class="chk-group" style="margin-top: 10px;">
+                        <input type="checkbox" id="last-man-standing">
+                        <label for="last-man-standing">Allow Last Man Batting</label>
+                    </div>
+                    <br>
+
+                    <div id="test-config" class="config-section hidden">
+                        <div class="innings-input">
+                            <label>Number of Innings (Total)</label>
+                            <input type="number" id="total-innings" value="4" min="1" max="10">
+                            <small class="dim" style="display:block; margin-top:5px;">Each innings is 90 overs</small>
+                        </div>
+                    </div>
+                    <br>
                     <button type="submit" class="btn-primary btn-large">
                         <span class="material-icons-round">sports_cricket</span> Start Match
                     </button>
@@ -84,6 +114,10 @@
                     <h2 id="bowling-team-name">Team B</h2>
                     <div class="target-display hidden" id="target-display">
                         Target: <span id="target-score">--</span>
+                    </div>
+                    <div class="status-lines">
+                        <div class="stat-line hidden" id="rrr-display">RRR: <span id="rrr">0.00</span></div>
+                        <div class="stat-line hidden" id="lead-display">Lead: <span id="lead">0</span></div>
                     </div>
                     <div class="crr-display">
                         CRR: <span id="crr">0.00</span>
@@ -150,6 +184,7 @@
 
                 <button class="btn-wicket" onclick="openWicketModal()">OUT</button>
                 <button class="btn-action" onclick="undoLastBall()">UNDO</button>
+                <button class="btn-action hidden" id="declare-btn" onclick="declareInnings()">DECLARE</button>
                 <button class="btn-action" onclick="endMatch()">END</button>
             </div>
         </section> <!-- End Match View -->
