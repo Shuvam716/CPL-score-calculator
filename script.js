@@ -30,7 +30,8 @@ let matchState = {
     // Stats storage
     playerStats: {}, // { 'TeamA_Player1': { runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0, overs: 0, runsConceded: 0 } }
 
-    completedInnings: [] // Stores history of previous innings
+    completedInnings: [], // Stores history of previous innings
+    currentView: 'setup' // Track which screen the user is on
 };
 
 // Undo stack
@@ -39,26 +40,41 @@ let undoStack = [];
 // DOM Elements
 const views = {
     setup: document.getElementById('setup-view'),
+    toss: document.getElementById('toss-view'),
     match: document.getElementById('match-view')
 };
 
 // --- Initialization ---
 
 // Check if match exists in localStorage
-/* 
-// Commented out to force new match for demo/testing purposes easier. 
-// In a real app, un-comment to enable persistence.
-if(localStorage.getItem('cricket_match_state')) {
-    matchState = JSON.parse(localStorage.getItem('cricket_match_state'));
-    showView('match');
-    updateUI();
+if (localStorage.getItem('cricket_match_state')) {
+    try {
+        const savedState = JSON.parse(localStorage.getItem('cricket_match_state'));
+        matchState = savedState;
+
+        // Restore view
+        if (matchState.currentView === 'match') {
+            showView('match');
+            updateUI();
+        } else if (matchState.currentView === 'toss') {
+            showTossPhase();
+        } else {
+            showView('setup');
+        }
+    } catch (e) {
+        console.error("Error restoring match state:", e);
+        localStorage.removeItem('cricket_match_state');
+    }
 }
-*/
 
 function showView(viewName) {
     Object.values(views).forEach(v => v.classList.add('hidden'));
     views[viewName].classList.remove('hidden');
     views[viewName].classList.add('active-view');
+
+    // Save current view
+    matchState.currentView = viewName;
+    saveMatch();
 }
 
 // --- Setup Phase ---
@@ -92,6 +108,16 @@ document.getElementById('setup-form').addEventListener('submit', (e) => {
     const teamB = document.getElementById('team-b-name').value;
     const squadB = document.getElementById('team-b-squad').value.split('\n').map(n => n.trim()).filter(n => n);
 
+    // Unique Player Check
+    const allNames = [...squadA, ...squadB];
+    const uniqueNames = new Set(allNames);
+    if (uniqueNames.size !== allNames.length) {
+        // Find duplicates
+        const duplicates = allNames.filter((name, index) => allNames.indexOf(name) !== index);
+        alert(`Duplicate player names found: ${[...new Set(duplicates)].join(', ')}. Each player must have a unique name.`);
+        return;
+    }
+
     // Match Config
     const matchType = document.querySelector('input[name="matchType"]:checked').value;
 
@@ -114,11 +140,15 @@ document.getElementById('setup-form').addEventListener('submit', (e) => {
 
     // Init Stats
     [...squadA, ...squadB].forEach(p => {
-        matchState.playerStats[p] = { runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0, overs: 0, runsConceded: 0, out: false };
+        matchState.playerStats[p] = {
+            runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0,
+            ballsBowled: 0, runsConceded: 0, out: false,
+            catches: 0, runouts: 0, howOut: null
+        };
     });
 
-    // Initial Selection
-    startInnings();
+    // Go to Toss Phase
+    showTossPhase();
 });
 
 function toggleMatchType() {
@@ -135,29 +165,75 @@ function toggleMatchType() {
     }
 }
 
-function startInnings() {
-    // Reset "Out" status and Stats for all players for the new innings (Per-innings tracking)
-    Object.keys(matchState.playerStats).forEach(p => {
-        matchState.playerStats[p].out = false;
-        matchState.playerStats[p].runs = 0;
-        matchState.playerStats[p].balls = 0;
-        matchState.playerStats[p].fours = 0;
-        matchState.playerStats[p].sixes = 0;
-        matchState.playerStats[p].wickets = 0;
-        matchState.playerStats[p].ballsBowled = 0; // New: accurate over calc
-        matchState.playerStats[p].runsConceded = 0;
-        matchState.playerStats[p].catches = 0;
-        matchState.playerStats[p].runouts = 0;
-        matchState.playerStats[p].howOut = null;
-    });
+function showTossPhase() {
+    showView('toss');
+    document.getElementById('toss-intro').innerText = `${matchState.teams.a.name} vs ${matchState.teams.b.name}`;
+    document.getElementById('toss-instruction').innerText = `${matchState.teams.a.name}, make your call!`;
+    document.getElementById('toss-call-section').classList.remove('hidden');
+    document.getElementById('toss-result-section').classList.add('hidden');
+    document.getElementById('toss-choice-section').classList.add('hidden');
+}
 
-    // Determine batting/bowling team
+let tossWinner = null;
+
+function flipCoin(call) {
+    const coin = document.getElementById('coin');
+    const resultSection = document.getElementById('toss-result-section');
+    const callSection = document.getElementById('toss-call-section');
+    const winnerText = document.getElementById('toss-winner-text');
+    const resultDetail = document.getElementById('toss-result-detail');
+    const choiceSection = document.getElementById('toss-choice-section');
+
+    callSection.classList.add('hidden');
+    resultSection.classList.remove('hidden');
+    choiceSection.classList.add('hidden');
+
+    coin.classList.remove('coin-flip');
+    void coin.offsetWidth; // Trigger reflow
+    coin.classList.add('coin-flip');
+    coin.innerText = "?";
+
+    setTimeout(() => {
+        const result = Math.random() < 0.5 ? 'Heads' : 'Tails';
+        coin.innerText = result[0]; // H or T
+
+        const isWin = result === call;
+        const winnerKey = isWin ? 'a' : 'b';
+        tossWinner = winnerKey;
+        const winnerName = matchState.teams[winnerKey].name;
+
+        winnerText.innerText = `${winnerName} WON THE TOSS!`;
+        resultDetail.innerText = `Result: ${result} (Called ${call})`;
+
+        setTimeout(() => {
+            choiceSection.classList.remove('hidden');
+        }, 500);
+    }, 1500);
+}
+
+function tossChoice(choice) {
+    const oppKey = tossWinner === 'a' ? 'b' : 'a';
+
+    if (choice === 'bat') {
+        matchState.battingTeam = tossWinner;
+        matchState.bowlingTeam = oppKey;
+    } else {
+        matchState.battingTeam = oppKey;
+        matchState.bowlingTeam = tossWinner;
+    }
+
+    startInnings();
+}
+
+function startInnings() {
+    // Determine batting/bowling team names for UI feedback
     const batTeamKey = matchState.battingTeam;
     const bowlTeamKey = matchState.bowlingTeam;
 
     showView('match');
 
     // Prompt for Openers
+    pushUndoState(); // Store initial null state or previous state
     promptPlayerSelection(batTeamKey, 'Striker', (p1) => {
         matchState.striker = p1;
         promptPlayerSelection(batTeamKey, 'Non-Striker', (p2) => {
@@ -393,6 +469,7 @@ function endOver() {
         endInnings();
     } else {
         // New Bowler needed
+        pushUndoState();
         promptPlayerSelection(matchState.bowlingTeam, 'New Bowler', (p) => {
             matchState.bowler = p;
             updateUI();
@@ -409,6 +486,38 @@ function swapStrike() {
     matchState.nonStriker = temp;
 }
 
+function manualSwapStrike() {
+    if (!matchState.striker || !matchState.nonStriker) return;
+    pushUndoState();
+    swapStrike();
+    updateUI();
+}
+
+function changeStriker() {
+    pushUndoState();
+    promptPlayerSelection(matchState.battingTeam, 'Striker', (p) => {
+        matchState.striker = p;
+        updateUI();
+    });
+}
+
+function changeNonStriker() {
+    if (matchState.config.lastManStanding && !matchState.nonStriker) return;
+    pushUndoState();
+    promptPlayerSelection(matchState.battingTeam, 'Non-Striker', (p) => {
+        matchState.nonStriker = p;
+        updateUI();
+    });
+}
+
+function changeBowler() {
+    pushUndoState();
+    promptPlayerSelection(matchState.bowlingTeam, 'Bowler', (p) => {
+        matchState.bowler = p;
+        updateUI();
+    });
+}
+
 // --- Wicket Logic ---
 
 function openWicketModal() {
@@ -418,6 +527,47 @@ function openWicketModal() {
     }
     document.getElementById('wicket-modal').classList.remove('hidden');
     document.getElementById('run-out-options').classList.add('hidden');
+}
+
+function openAddPlayerModal() {
+    document.getElementById('add-player-modal').classList.remove('hidden');
+    document.getElementById('new-player-name').value = '';
+
+    // Set Button Labels to actual team names
+    document.getElementById('add-player-team-a-btn').innerText = matchState.teams.a.name || "Team A";
+    document.getElementById('add-player-team-b-btn').innerText = matchState.teams.b.name || "Team B";
+}
+
+function confirmAddPlayer(teamKey) {
+    const nameInput = document.getElementById('new-player-name');
+    const name = nameInput.value.trim();
+
+    if (!name) {
+        alert("Please enter a player name.");
+        return;
+    }
+
+    // Check for duplicates
+    const allPlayers = [...matchState.teams.a.players, ...matchState.teams.b.players];
+    if (allPlayers.includes(name)) {
+        alert("A player with this name already exists in the match.");
+        return;
+    }
+
+    // Add to squad
+    matchState.teams[teamKey].players.push(name);
+
+    // Init Stats
+    matchState.playerStats[name] = {
+        runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0,
+        ballsBowled: 0, runsConceded: 0, out: false,
+        catches: 0, runouts: 0, howOut: null
+    };
+
+    closeModal('add-player-modal');
+    alert(`Added ${name} to ${matchState.teams[teamKey].name}`);
+    updateUI();
+    saveMatch();
 }
 
 function initRunOut() {
@@ -495,8 +645,6 @@ function finalizeWicket(type, who, fielder) {
         return;
     }
 
-    advanceBall();
-
     // Special Case for LMS: If we are at 9 wickets (in 11 player squad) and LMS true -> One man remains
     // Don't prompt for Non-Striker if "who" was non-striker.
     // Logic: If LMS is active and wickets == squad - 1, we are in Last Man state.
@@ -514,6 +662,7 @@ function finalizeWicket(type, who, fielder) {
             // Non-striker got out. Striker stays striker.
             matchState.nonStriker = null;
         }
+        advanceBall();
         updateUI();
         return;
     }
@@ -525,6 +674,7 @@ function finalizeWicket(type, who, fielder) {
         } else {
             matchState.striker = p;
         }
+        advanceBall();
         updateUI();
     });
 }
@@ -687,6 +837,13 @@ function updateUI() {
 
 function saveMatch() {
     localStorage.setItem('cricket_match_state', JSON.stringify(matchState));
+}
+
+function createNewMatch() {
+    if (confirm("This will clear all current match data and start a fresh match. Are you sure?")) {
+        localStorage.removeItem('cricket_match_state');
+        location.reload(); // Simplest way to reset everything clean
+    }
 }
 
 function declareInnings() {
