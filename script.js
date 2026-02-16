@@ -46,33 +46,19 @@ const views = {
 
 // --- Initialization ---
 
-// Check if match exists in localStorage
-if (localStorage.getItem('cricket_match_state')) {
-    try {
-        const savedState = JSON.parse(localStorage.getItem('cricket_match_state'));
-        matchState = savedState;
-
-        // Restore view
-        if (matchState.currentView === 'match') {
-            showView('match');
-            updateUI();
-        } else if (matchState.currentView === 'toss') {
-            showTossPhase();
-        } else {
-            showView('setup');
-        }
-    } catch (e) {
-        console.error("Error restoring match state:", e);
-        localStorage.removeItem('cricket_match_state');
-    }
-}
+// --- Initialization will happen at end of file ---
 
 function showView(viewName) {
-    Object.values(views).forEach(v => v.classList.add('hidden'));
+    if (!views[viewName]) {
+        console.error(`View "${viewName}" not found.`);
+        return;
+    }
+    Object.values(views).forEach(v => {
+        if (v) v.classList.add('hidden');
+    });
     views[viewName].classList.remove('hidden');
     views[viewName].classList.add('active-view');
 
-    // Save current view
     matchState.currentView = viewName;
     saveMatch();
 }
@@ -1342,3 +1328,28 @@ function generatePDF() {
         closeModal('match-end-modal');
     });
 }
+
+// --- Bootstrap ---
+(function init() {
+    const saved = localStorage.getItem('cricket_match_state');
+    if (saved) {
+        try {
+            const savedState = JSON.parse(saved);
+            // Merge saved state into fresh matchState to avoid missing keys
+            matchState = { ...matchState, ...savedState };
+            matchState.teams = { ...matchState.teams, ...(savedState.teams || {}) };
+            matchState.config = { ...matchState.config, ...(savedState.config || {}) };
+
+            if (matchState.currentView === 'match') {
+                showView('match');
+                updateUI();
+            } else if (matchState.currentView === 'toss') {
+                showTossPhase();
+            } else {
+                showView('setup');
+            }
+        } catch (e) {
+            console.error("Failed to restore state:", e);
+        }
+    }
+})();
