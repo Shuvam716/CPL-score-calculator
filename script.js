@@ -1337,4 +1337,8 @@ function generatePDF() {
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
 
- 
+    html2pdf().set(opt).from(element).save().then(() => {
+        element.style.display = 'none';
+        closeModal('match-end-modal');
+    });
+}
