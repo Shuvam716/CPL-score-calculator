@@ -965,6 +965,8 @@ function endInnings() {
 
                 document.getElementById('match-end-modal').classList.remove('hidden');
                 document.getElementById('match-result-text').innerText = resultText;
+                generatePDF(); // Trigger automatic download
+                localStorage.removeItem('cricket_match_state'); // Clear state so next start is fresh
                 return; // Stop here, do not start next innings
             }
 
@@ -1024,6 +1026,8 @@ function endInnings() {
 
         document.getElementById('match-end-modal').classList.remove('hidden');
         document.getElementById('match-result-text').innerText = resultText;
+        generatePDF(); // Trigger automatic download
+        localStorage.removeItem('cricket_match_state'); // Clear state so next start is fresh
     }
 }
 
@@ -1333,8 +1337,4 @@ function generatePDF() {
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(element).save().then(() => {
-        element.style.display = 'none';
-        closeModal('match-end-modal');
-    });
-}
+ 
