@@ -339,7 +339,13 @@ function openExtraModal(type) {
     if (type === 'wide') {
         title.innerText = "Wide Ball Options";
         createExtraBtn("Standard (1)", () => confirmExtra('wide', 0)); // 1 run total
+        createExtraBtn("Wide + 1 (2)", () => confirmExtra('wide', 1)); // 2 runs total
+        createExtraBtn("Wide + 2 (3)", () => confirmExtra('wide', 2)); // 3 runs total
+        createExtraBtn("Wide + 3 (4)", () => confirmExtra('wide', 3)); // 4 runs total
         createExtraBtn("Wide + 4 (5)", () => confirmExtra('wide', 4)); // 5 runs total
+        createExtraBtn("Wide + 5 (6)", () => confirmExtra('wide', 5)); // 6 runs total
+        createExtraBtn("Wide + 6 (7)", () => confirmExtra('wide', 6)); // 7 runs total
+        createExtraBtn("Wide + 7 (8)", () => confirmExtra('wide', 7)); // 8 runs total
     } else if (type === 'nb') {
         title.innerText = "No Ball Options";
         createExtraBtn("Standard (1)", () => confirmExtra('nb', 0)); // 1 run total
@@ -354,6 +360,16 @@ function openExtraModal(type) {
         createExtraBtn("2 Byes", () => confirmExtra('bye', 2));
         createExtraBtn("3 Byes", () => confirmExtra('bye', 3));
         createExtraBtn("4 Byes", () => confirmExtra('bye', 4));
+        createExtraBtn("5 Byes", () => confirmExtra('bye', 5));
+        createExtraBtn("6 Byes", () => confirmExtra('bye', 6));
+        createExtraBtn("7 Byes", () => confirmExtra('bye', 7));
+        createExtraBtn("8 Byes", () => confirmExtra('bye', 8));
+    } else if (type === 'overthrow') {
+        title.innerText = "Overthrow Options";
+        createExtraBtn("4 + 1 Run (5)", () => confirmExtra('overthrow', 1));
+        createExtraBtn("4 + 2 Runs (6)", () => confirmExtra('overthrow', 2));
+        createExtraBtn("4 + 3 Runs (7)", () => confirmExtra('overthrow', 3));
+        createExtraBtn("4 + 4 Runs (8)", () => confirmExtra('overthrow', 4));
     }
 
     modal.classList.remove('hidden');
@@ -386,6 +402,8 @@ function confirmExtra(type, addedRuns) {
             bowler: matchState.bowler, batsman: matchState.striker
         });
 
+        // Swap strike if odd runs taken
+        if (addedRuns % 2 !== 0) swapStrike();
     } else if (type === 'nb') {
         // No Ball (1) + addedRuns (scored by batter or byes? Usually "NB+Runs" implies bat runs unless specified legbyes etc. Let's assume bat runs for simplicity in this context as "NB+4" usually means boundary off NB)
         const total = 1 + addedRuns;
@@ -424,6 +442,21 @@ function confirmExtra(type, addedRuns) {
 
         const display = `B${addedRuns}`;
         recordBall(display, true); // counts legal ball
+
+        if (addedRuns % 2 !== 0) swapStrike();
+        advanceBall();
+    } else if (type === 'overthrow') {
+        // Overthrow: 4 (boundary) + addedRuns (runners)
+        const total = 4 + addedRuns;
+        matchState.score += total;
+        matchState.playerStats[matchState.bowler].runsConceded += total;
+
+        // Batsman only gets runners' runs
+        matchState.playerStats[matchState.striker].runs += addedRuns;
+        matchState.playerStats[matchState.striker].balls++;
+
+        const display = `OT${total}`;
+        recordBall(display, false); // Legal ball
 
         if (addedRuns % 2 !== 0) swapStrike();
         advanceBall();
