@@ -31,7 +31,8 @@ let matchState = {
     playerStats: {}, // { 'TeamA_Player1': { runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0, overs: 0, runsConceded: 0 } }
 
     completedInnings: [], // Stores history of previous innings
-    currentView: 'setup' // Track which screen the user is on
+    currentView: 'setup', // Track which screen the user is on
+    matchOver: false // Flag to stop auto-saving after match completion
 };
 
 // Undo stack
@@ -340,6 +341,15 @@ function openExtraModal(type) {
         createExtraBtn("NB + 3 Runs", () => confirmExtra('nb', 3));
         createExtraBtn("NB + 4 Runs", () => confirmExtra('nb', 4));
         createExtraBtn("NB + 6 Runs", () => confirmExtra('nb', 6));
+
+        // NB + Byes
+        createExtraBtn("NB + Bye 1", () => confirmExtra('nb_bye', 1));
+        createExtraBtn("NB + Bye 2", () => confirmExtra('nb_bye', 2));
+        createExtraBtn("NB + Bye 3", () => confirmExtra('nb_bye', 3));
+        createExtraBtn("NB + Bye 4", () => confirmExtra('nb_bye', 4));
+        createExtraBtn("NB + Bye 5", () => confirmExtra('nb_bye', 5));
+        createExtraBtn("NB + Bye 6", () => confirmExtra('nb_bye', 6));
+        createExtraBtn("NB + Bye 7", () => confirmExtra('nb_bye', 7));
     } else if (type === 'bye') {
         title.innerText = "Bye Options";
         createExtraBtn("1 Bye", () => confirmExtra('bye', 1));
@@ -352,6 +362,7 @@ function openExtraModal(type) {
         createExtraBtn("8 Byes", () => confirmExtra('bye', 8));
     } else if (type === 'overthrow') {
         title.innerText = "Overthrow Options";
+        createExtraBtn("4 + 0 Runs (4)", () => confirmExtra('overthrow', 0));
         createExtraBtn("4 + 1 Run (5)", () => confirmExtra('overthrow', 1));
         createExtraBtn("4 + 2 Runs (6)", () => confirmExtra('overthrow', 2));
         createExtraBtn("4 + 3 Runs (7)", () => confirmExtra('overthrow', 3));
@@ -402,12 +413,12 @@ function confirmExtra(type, addedRuns) {
         // Standard rule: 1 run for NB is extra. Runs scored off the bat are credited to batsman.
         if (addedRuns > 0) {
             matchState.playerStats[matchState.striker].runs += addedRuns;
-            matchState.playerStats[matchState.striker].balls++; // Counts as ball faced? NB usually doesn't count as valid ball faced in some formats, but usually does for stats. Let's stick to standard: NB doesn't count as legal ball for over, but counts for records.
             if (addedRuns === 4) matchState.playerStats[matchState.striker].fours++;
             if (addedRuns === 6) matchState.playerStats[matchState.striker].sixes++;
         }
-        // NB itself doesn't count as ball faced usually, but let's leave simply.
-        matchState.playerStats[matchState.striker].balls++; // Record interaction
+
+        // Standard NB counts as ball faced? Usually yes for stats, but NB doesn't reduce overs.
+        matchState.playerStats[matchState.striker].balls++;
 
         const display = addedRuns > 0 ? `NB+${addedRuns}` : 'NB';
         matchState.currentOverHistory.push(display);
@@ -418,6 +429,22 @@ function confirmExtra(type, addedRuns) {
         });
 
         // Swap strike if odd runs (runs off bat)
+        if (addedRuns % 2 !== 0) swapStrike();
+
+    } else if (type === 'nb_bye') {
+        const total = 1 + addedRuns;
+        matchState.score += total;
+        matchState.playerStats[matchState.bowler].runsConceded += total;
+        matchState.playerStats[matchState.striker].balls++;
+
+        const display = `NB+B${addedRuns}`;
+        matchState.currentOverHistory.push(display);
+        matchState.ballHistory.push({
+            over: matchState.overs, ball: matchState.ballsInOver,
+            type: 'NB_BYE', runs: total,
+            bowler: matchState.bowler, batsman: matchState.striker
+        });
+
         if (addedRuns % 2 !== 0) swapStrike();
 
     } else if (type === 'bye') {
@@ -855,6 +882,7 @@ function updateUI() {
 }
 
 function saveMatch() {
+    if (matchState.matchOver) return; // Don't save if match already ended
     localStorage.setItem('cricket_match_state', JSON.stringify(matchState));
 }
 
@@ -918,6 +946,15 @@ function endInnings() {
         matchState.ballsInOver = 0;
         matchState.currentOverHistory = [];
 
+        // Reset Player Stats for the new innings (to avoid doubling in snapshots)
+        Object.keys(matchState.playerStats).forEach(p => {
+            matchState.playerStats[p] = {
+                runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0,
+                ballsBowled: 0, runsConceded: 0, out: false,
+                catches: 0, runouts: 0, howOut: null
+            };
+        });
+
         // Reset Crease
         matchState.striker = null;
         matchState.nonStriker = null;
@@ -952,6 +989,7 @@ function endInnings() {
                 document.getElementById('match-end-modal').classList.remove('hidden');
                 document.getElementById('match-result-text').innerText = resultText;
                 generatePDF(); // Trigger automatic download
+                matchState.matchOver = true; // Set flag
                 localStorage.removeItem('cricket_match_state'); // Clear state so next start is fresh
                 return; // Stop here, do not start next innings
             }
@@ -1013,6 +1051,7 @@ function endInnings() {
         document.getElementById('match-end-modal').classList.remove('hidden');
         document.getElementById('match-result-text').innerText = resultText;
         generatePDF(); // Trigger automatic download
+        matchState.matchOver = true; // Set flag
         localStorage.removeItem('cricket_match_state'); // Clear state so next start is fresh
     }
 }
@@ -1067,12 +1106,12 @@ function generatePDF() {
     // 1. Calculate Best Performers
     const getBestPerformers = () => {
         let bestBat = { name: 'None', runs: -1, balls: 0 };
-        let bestBowl = { name: 'None', wickets: -1, runs: 0 };
+        let bestBowl = { name: 'None', wickets: -1, runs: Infinity, bowled: false };
         let bestField = { name: 'None', points: -1 };
 
-        let aggStats = {}; // { PlayName: {runs, balls, wickets, runsConceded, catches, runouts} }
+        let aggStats = {}; // { PlayName: {runs, balls, wickets, runsConceded, catches, runouts, ballsBowled} }
         [...matchState.teams.a.players, ...matchState.teams.b.players].forEach(p =>
-            aggStats[p] = { runs: 0, balls: 0, wickets: 0, runsConceded: 0, catches: 0, runouts: 0 }
+            aggStats[p] = { runs: 0, balls: 0, wickets: 0, runsConceded: 0, catches: 0, runouts: 0, ballsBowled: 0 }
         );
 
         matchState.completedInnings.forEach(inn => {
@@ -1083,9 +1122,9 @@ function generatePDF() {
                     aggStats[p].balls += snap[p].balls;
                     aggStats[p].wickets += snap[p].wickets;
                     aggStats[p].runsConceded += snap[p].runsConceded;
+                    aggStats[p].ballsBowled += (snap[p].ballsBowled || 0);
                     aggStats[p].catches = (aggStats[p].catches || 0) + (snap[p].catches || 0);
                     aggStats[p].runouts = (aggStats[p].runouts || 0) + (snap[p].runouts || 0);
-                    // ballsBowled etc if needed
                 }
             });
         });
@@ -1096,19 +1135,21 @@ function generatePDF() {
             // Bat
             if (s.runs > bestBat.runs) {
                 bestBat = { name: p, runs: s.runs, balls: s.balls };
-            } else if (s.runs === bestBat.runs && s.balls < bestBat.balls) { // Tie-break: faster
+            } else if (s.runs === bestBat.runs && s.balls < bestBat.balls && s.balls > 0) { // Tie-break: faster
                 bestBat = { name: p, runs: s.runs, balls: s.balls };
             }
 
-            // Bowl
-            if (s.wickets > bestBowl.wickets) {
-                bestBowl = { name: p, wickets: s.wickets, runs: s.runsConceded };
-            } else if (s.wickets === bestBowl.wickets && s.runsConceded < bestBowl.runs) { // Tie-break: economical
-                bestBowl = { name: p, wickets: s.wickets, runs: s.runsConceded };
+            // Bowl: Only if they actually bowled
+            if (s.ballsBowled > 0) {
+                if (s.wickets > bestBowl.wickets) {
+                    bestBowl = { name: p, wickets: s.wickets, runs: s.runsConceded, bowled: true };
+                } else if (s.wickets === bestBowl.wickets && s.runsConceded < bestBowl.runs) { // Tie-break: fewer runs
+                    bestBowl = { name: p, wickets: s.wickets, runs: s.runsConceded, bowled: true };
+                }
             }
 
             // Field
-            const pts = s.catches * 1 + s.runouts * 1;
+            const pts = (s.catches || 0) + (s.runouts || 0);
             if (pts > bestField.points) {
                 bestField = { name: p, points: pts };
             }
@@ -1126,12 +1167,15 @@ function generatePDF() {
     Object.keys(aggStats).forEach(p => {
         const val = aggStats[p];
         const fPts = (val.catches || 0) + (val.runouts || 0);
-        const total = Math.floor(val.runs / 2) + (val.wickets * 1) + fPts;
+        // Point formula: 1 point per run + (wickets * 2) + fielding points
+        const total = val.runs + (val.wickets * 2) + fPts;
         if (total > maxPoints) {
             maxPoints = total;
             momName = p;
-            momStats = `${total} Pts`; // Simplified
-        } else if (total === maxPoints) momName += ` & ${p}`;
+            momStats = `${total} Pts`;
+        } else if (total === maxPoints && total > 0) {
+            momName += ` & ${p}`;
+        }
     });
 
     // 2. Generate SVG Graph
@@ -1350,6 +1394,9 @@ function generatePDF() {
             }
         } catch (e) {
             console.error("Failed to restore state:", e);
+            showView('setup');
         }
+    } else {
+        showView('setup');
     }
 })();
